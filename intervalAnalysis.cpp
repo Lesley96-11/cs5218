@@ -24,6 +24,8 @@ using namespace llvm;
 const static int POS_LIMIT = 1000;
 const static int NEG_LIMIT = -1000;
 
+std::map<BasicBlock *, std::vector<std::map<Instruction *, std::pair<int, int>>>> varIntervalMap;
+
 std::pair<int, int> init(int min, int max) {
     std::pair<int, int> var;
         if (min > max) {
@@ -65,39 +67,66 @@ int limitRange (int a) {
 }
 
 std::pair<int, int> addOp(std::pair<int, int> a, std::pair<int, int> b) {
-    if (checkEmpty(a)) {
-        return a;
-    }
-    if ( checkEmpty(b)) {
-        return b;
-    }
-    int min = NEG_LIMIT;
-    int max = POS_LIMIT;
-    if (a.first != NEG_LIMIT && b.first != NEG_LIMIT) {
-        min = a.first + b.first;;
-    } 
-    if (a.second != POS_LIMIT && b.second != POS_LIMIT) {
-        max = a.second + b.second;
-    }
-    return std::make_pair(min, max);
+    // if (checkEmpty(a)) {
+    //     return a;
+    // }
+    // if ( checkEmpty(b)) {
+    //     return b;
+    // }
+    // int min = NEG_LIMIT;
+    // int max = POS_LIMIT;
+    // if (a.first != NEG_LIMIT && b.first != NEG_LIMIT) {
+    //     min = a.first + b.first;;
+    // } 
+    // if (a.second != POS_LIMIT && b.second != POS_LIMIT) {
+    //     max = a.second + b.second;
+    // }
+    // return std::make_pair(min, max);
+
+
+    if (checkEmpty(a) || checkEmpty(b)) {
+            return std::make_pair(POS_LIMIT, NEG_LIMIT);
+        }
+        int lower = a.first + b.first;
+        int upper = a.second + b.second;
+        if (a.first == NEG_LIMIT || b.first == NEG_LIMIT) {
+            lower = NEG_LIMIT;
+        }
+        if (a.second == POS_LIMIT || b.second == POS_LIMIT) {
+            upper = POS_LIMIT;
+        }
+        return std::make_pair(lower, upper);
 }
 
 std::pair<int, int> subOp(std::pair<int, int> a, std::pair<int, int> b) {
-    if (checkEmpty(a)) {
-        return a;
-    }
-    if ( checkEmpty(b)) {
-        return b;
-    }
-    int min = NEG_LIMIT;
-    int max = POS_LIMIT;
-    if (a.first != NEG_LIMIT && b.second != POS_LIMIT) {
-        min = a.first - b.second;
-    }
-    if (a.second != POS_LIMIT && b.first != NEG_LIMIT) {
-        max = a.second - b.first;
-    }
-    return std::make_pair(min, max);
+    // if (checkEmpty(a)) {
+    //     return a;
+    // }
+    // if ( checkEmpty(b)) {
+    //     return b;
+    // }
+    // int min = NEG_LIMIT;
+    // int max = POS_LIMIT;
+    // if (a.first != NEG_LIMIT && b.second != POS_LIMIT) {
+    //     min = a.first - b.second;
+    // }
+    // if (a.second != POS_LIMIT && b.first != NEG_LIMIT) {
+    //     max = a.second - b.first;
+    // }
+    // return std::make_pair(min, max);
+
+    if (checkEmpty(a) || checkEmpty(b)) {
+            return std::make_pair(POS_LIMIT, NEG_LIMIT);
+        }
+        int lower = a.first - b.second;
+        int upper = a.second - b.first;
+        if (a.first == NEG_LIMIT || b.second == POS_LIMIT) {
+            lower = NEG_LIMIT;
+        }
+        if (a.second == POS_LIMIT || b.first == NEG_LIMIT) {
+            upper = POS_LIMIT;
+        }
+        return std::make_pair(lower, upper);
 }
 
 std::pair<int, int> mulOp(std::pair<int, int> a, std::pair<int, int> b) {
@@ -176,7 +205,15 @@ std::string getInstructionString(Instruction &I) {
 }
 
 std::pair<int, int> intersection(std::pair<int, int> interval1, std::pair<int, int> interval2) {
-        if (interval1.first == POS_LIMIT || interval2.first == POS_LIMIT || interval1.first > interval2.second || interval2.first > interval1.second) {
+        // if ((interval1.first == POS_LIMIT || interval2.first == POS_LIMIT) || (interval1.first > interval2.second || interval2.first > interval1.second)) {
+        //     return std::make_pair(POS_LIMIT, NEG_LIMIT);
+        // } else {
+        //     return std::make_pair(std::max(interval1.first, interval2.first), std::min(interval1.second, interval2.second));
+        // }
+
+        if (interval1.first == POS_LIMIT || interval2.first == POS_LIMIT) {
+            return std::make_pair(POS_LIMIT, NEG_LIMIT);
+        } else if (interval1.first > interval2.second || interval2.first > interval1.second) {
             return std::make_pair(POS_LIMIT, NEG_LIMIT);
         } else {
             return std::make_pair(std::max(interval1.first, interval2.first), std::min(interval1.second, interval2.second));
@@ -190,34 +227,311 @@ void mathOperation(Instruction &I, std::map<Instruction *, std::pair<int, int>> 
 void branchOperation(BasicBlock *BB, Instruction &I, std::map<Instruction *, std::pair<int, int>> &instrRangeMap, std::map<std::string, Instruction *> &instrMap, std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> &updatedBlockMap);
 bool blockAnalysis(BasicBlock *BB, std::map<Instruction *, std::pair<int, int>> &instrRangeMap, std::map<std::string, Instruction *> &instrMap,
                   std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> &analysisMap, std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> &updatedBlockMap);
-bool intervalBlockAnalysis(BasicBlock *BB,
-                             std::map<std::map<Instruction *, varInterval> *, std::map<Instruction *, varInterval>> &input,
+bool analyzeBlockWithContext(BasicBlock *BB,
+                             std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &input,
                              std::map<std::string, Instruction *> &instructionMap,
-                             std::map<BasicBlock *, std::map<std::map<Instruction *, varInterval> *, std::map<Instruction *, varInterval>>> &contextAnalysisMap,
-                             std::map<BasicBlock *, std::map<std::map<Instruction *, varInterval> *, std::map<Instruction *, varInterval>>> &result);
+                             std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> &contextAnalysisMap,
+                             std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> &result);
+
+// void printBasicBlockContext(std::map<BasicBlock *, std::vector<std::map<Instruction *, std::pair<int, int>>>> context) {
+//     for (auto &p : context) {
+//         std::cout << getBasicBlockLabel(p.first) << std::endl;
+//         for (auto &pp : p.second) {
+//             std::cout << "Case:" << std::endl;
+//             for (auto &ppp : pp) {
+//                 std::cout << getInstructionString(*(ppp.first)) << "  >>  " << ppp.second.getIntervalString()
+//                           << std::endl;
+//             }
+//         }
+//     }
+// }
+
+// void printcontextCombination(std::vector<std::map<Instruction *, std::pair<int, int>>> &contextCombination) {
+//     for (auto &combination : contextCombination) {
+//         std::cout << "================Context=============" << std::endl;
+//         for (auto &combination_pair : combination) {
+//             std::cout << getInstructionString(*(combination_pair.first)) << "  >>  "
+//                       << combination_pair.second.getIntervalString()
+//                       << std::endl;
+//         }
+//     }
+// }
 
 
-void printBasicBlockContext(std::map<BasicBlock *, std::vector<std::map<Instruction *, varInterval>>> context) {
+std::vector<std::pair<int,int>> getOperandIntervals(Instruction &I, Value *op1, Value *op2, std::map<Instruction *, std::pair<int,int>> context,
+                                             std::map<Instruction *, std::pair<int,int>> &variables, std::map<std::string, Instruction *> &instructionMap) {
+    bool isInContext = context.find(&I) != context.end();
+    std::pair<int,int> interval_op1;
+    std::pair<int,int> interval_op2;
+    if (isa<llvm::ConstantInt>(op2)) {
+        auto op2_val = dyn_cast<llvm::ConstantInt>(op2)->getZExtValue();
+        auto op1_instr = instructionMap[getInstructionString(*dyn_cast<Instruction>(op1))];
+        interval_op1 = variables[op1_instr];
+        interval_op2 = std::make_pair(op2_val, op2_val);
+
+    } else if (isa<llvm::ConstantInt>(op1)) {
+        auto op1_val = dyn_cast<llvm::ConstantInt>(op1)->getZExtValue();
+        auto op2_instr = instructionMap[getInstructionString(*dyn_cast<Instruction>(op2))];
+        interval_op1 = std::make_pair(op1_val, op1_val);
+        interval_op2 = variables[op2_instr];
+    } else {
+        auto op1_instr = instructionMap[getInstructionString(*dyn_cast<Instruction>(op1))];
+        auto op2_instr = instructionMap[getInstructionString(*dyn_cast<Instruction>(op2))];
+        interval_op1 = variables[op1_instr];
+        interval_op2 = variables[op2_instr];
+    }
+    std::vector<std::pair<int,int>> results;
+    results.push_back(interval_op1);
+    results.push_back(interval_op2);
+    return results;
+}
+
+
+std::map<Instruction *, std::pair<int, int>> joinWithContext(BasicBlock *bb, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> blockMap) {
+    std::map<Instruction *, std::pair<int, int>> unionSet;
+    if (blockMap.size() == 0) return unionSet;
+    std::vector<Instruction *> intersetInstructionSet;
+    for (auto it = blockMap.begin(); it != blockMap.end(); ++it) {
+        if (it == blockMap.begin()) {
+            for (auto p : it->second) intersetInstructionSet.push_back(p.first);
+        } else {
+            std::vector<Instruction *> tempSet;
+            for (auto p : it->second) tempSet.push_back(p.first);
+
+            std::vector<Instruction *> intersetInstructionSet;
+            sort(intersetInstructionSet.begin(), intersetInstructionSet.end());
+            sort(tempSet.begin(), tempSet.end());
+            set_intersection(intersetInstructionSet.begin(), intersetInstructionSet.end(), tempSet.begin(), tempSet.end(), back_inserter(intersetInstructionSet));
+
+            // intersetInstructionSet = intersection(intersetInstructionSet, tempSet);
+        }
+    }
+    for (auto it = blockMap.begin(); it != blockMap.end(); ++it) {
+        if (it == blockMap.begin()) {
+            for (auto &element : intersetInstructionSet) {
+                    unionSet.insert(std::make_pair(element, it->second[element]));
+
+            }
+        } else {
+            for (auto &element : intersetInstructionSet) {
+
+                unionSet[element] = std::make_pair(std::min(unionSet[element].first, it->second[element].first), std::max(unionSet[element].second, it->second[element].second));
+                    // unionSet[element] = varInteral::getUnion(unionSet[element], it->second[element]);
+            }
+        }
+    }
+    for(auto it = unionSet.begin(); it != unionSet.end();){
+        if(it->first->getName().size() == 0 && !it->first->isUsedInBasicBlock(bb)){
+            it = unionSet.erase(it);
+        }else{
+            ++it;
+        }
+    }
+    return unionSet;
+}
+
+void cleanUpEmpty(BasicBlock *bb, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap) {
+    for (auto &pair : blockMap) {
+        bool containsEmpty = false;
+
+        for (auto &c : *pair.first) {
+            pair.second[c.first] = intersection(c.second, pair.second[c.first]);
+        }
+
+        for(auto it = pair.second.begin(); it != pair.second.end();){
+            if(it->first->getName().size() == 0 && !it->first->isUsedInBasicBlock(bb)){
+                it = pair.second.erase(it);
+            }else{
+                ++it;
+            }
+        }
+
+        for (auto &v : pair.second) {
+            if (checkEmpty(v.second)) {
+                containsEmpty = true;
+                break;
+            }
+        }
+        if (containsEmpty) {
+            for (auto &v : pair.second) {
+                v.second = std::make_pair(POS_LIMIT, NEG_LIMIT);
+            }
+        }
+    }
+}
+std::string getBasicBlockLabel(BasicBlock *BB) {
+    std::string basicBlockStr;
+    llvm::raw_string_ostream rso(basicBlockStr);
+    rso << ">>>>Basic Block: ";
+    BB->printAsOperand(rso, false);
+    return basicBlockStr;
+}
+
+void printAnalysisMap(std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> &analysisMap,
+                      std::map<std::string, Instruction *> &instructionMap) {
+    std::cout << "==============Analysis Report==============" << std::endl;
+    for (auto &m : analysisMap) {
+        std::cout << getBasicBlockLabel(m.first) << std::endl;
+        for (auto &_m : m.second) {
+            std::string intervalString;
+            if (checkEmpty(_m.second))
+                intervalString = "EMPTY SET";
+            else 
+                intervalString = (_m.second.first == NEG_LIMIT ? "NEG_LIMIT" : std::to_string(_m.second.first)) + "->" +
+                   (_m.second.second == POS_LIMIT ? "POS_LIMIT" : std::to_string(
+                           _m.second.second));
+            std::cout << getInstructionString(*(_m.first)) << "  >>  " << intervalString << std::endl;
+        }
+        for (auto mm = m.second.begin(); mm != m.second.end(); mm++) {
+            std::string temp_mm = (*mm).first->getName().str().c_str();
+            if (temp_mm.size() == 0) {
+                continue;
+            }
+            for (auto mm1 = mm; mm1 != m.second.end(); mm1++) {
+                std::string temp_mm1 = (*mm1).first->getName().str().c_str();
+                if (temp_mm1.size() == 0 || temp_mm == temp_mm1) {
+                    continue;
+                }
+                int v1_range[2] = {(*mm).second.first, (*mm).second.second};
+                int v2_range[2] = {(*mm1).second.first, (*mm1).second.second};
+                if (v1_range[0] == NEG_LIMIT || v1_range[1] == POS_LIMIT) {
+                    std::cout << temp_mm << " <--> " << temp_mm1 << " : "
+                              << "INF" << std::endl;
+                } else if (v2_range[0] == NEG_LIMIT || v2_range[1] == POS_LIMIT) {
+                    std::cout << temp_mm << " <--> " << temp_mm1 << " : "
+                              << "INF" << std::endl;
+                } else {
+                    int a = std::abs(v1_range[0] - v2_range[1]);
+                    int b = std::abs(v1_range[1] - v2_range[0]);
+                    std::cout << temp_mm << " <--> " << temp_mm1 << " : "
+                              << (a > b ? (a >= POS_LIMIT ? "INF" : std::to_string(a)) : (b >=
+                                                                                                     POS_LIMIT
+                                                                                                     ? "INF"
+                                                                                                     : std::to_string(
+                                              b)))
+                              << std::endl;
+                }
+
+            }
+        }
+        std::cout << "===========================================" << std::endl;
+    }
+}
+
+void printAnalysisMapWithContext(
+        std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> &contextAnalysisMap) {
+    for (auto &pair : contextAnalysisMap) {
+        std::cout << getBasicBlockLabel(pair.first) << "===============================" << std::endl;
+        // if(debug){
+        //     for (auto &context_variables : pair.second) {
+        //         bool isNotEmpty = true;
+        //         for (auto &context_pair : *context_variables.first) {
+        //             if (context_pair.second.isEmpty()) {
+        //                 isNotEmpty = false;
+        //                 break;
+        //             }
+        //         }
+        //         for (auto &variable_pair : context_variables.second) {
+        //             if (variable_pair.second.isEmpty()) {
+        //                 isNotEmpty = false;
+        //                 break;
+        //             }
+        //         }
+        //         if (!isNotEmpty) {
+        //             continue;
+        //         }
+        //         std::cout << "Context:  ------------------------" << std::endl;
+        //         for (auto &context_pair : *context_variables.first) {
+        //             std::cout << getInstructionString(*context_pair.first) << ">>"
+        //                       << context_pair.second.getIntervalString() << std::endl;
+        //         }
+        //         std::cout << "Variables: ------------------------" << std::endl;
+        //         for (auto &variable_pair : context_variables.second) {
+        //             std::cout << getInstructionString(*variable_pair.first) << ">>"
+        //                       << variable_pair.second.getIntervalString() << std::endl;
+        //         }
+        //     }
+        // }
+
+
+        std::map<Instruction *, std::pair<int, int>> final_result;
+        final_result = joinWithContext(pair.first, pair.second);
+        // if(debug)
+        //     std::cout << "Final Values ------------------------" << std::endl;
+        bool isNotEmpty = true;
+        for (auto &pair : final_result) {
+            if (checkEmpty(pair.second)) {
+                isNotEmpty = false;
+                break;
+            }
+        }
+        if (!isNotEmpty) {
+            continue;
+        }
+        for (auto &pair : final_result) {
+            if(pair.first->getName().size()!=0){
+                std::string intervalString;
+                if (checkEmpty(pair.second)){
+                    intervalString = "EMPTY SET";
+                }
+                else {
+                    intervalString = (pair.second.first == NEG_LIMIT ? "NEG_LIMIT" : std::to_string(pair.second.first)) + "->" +
+                       (pair.second.second == POS_LIMIT ? "POS_LIMIT" : std::to_string(
+                               pair.second.second));
+                }
+                std::cout << getInstructionString(*pair.first) << "  -> " << intervalString
+                      << std::endl;
+            }
+        }
+    }
+}
+
+void printBasicBlockContext(std::map<BasicBlock *, std::vector<std::map<Instruction *, std::pair<int, int>>>> context) {
     for (auto &p : context) {
         std::cout << getBasicBlockLabel(p.first) << std::endl;
         for (auto &pp : p.second) {
             std::cout << "Case:" << std::endl;
             for (auto &ppp : pp) {
-                std::cout << getInstructionString(*(ppp.first)) << "  >>  " << ppp.second.getIntervalString()
+                std::string intervalString;
+                if (checkEmpty(ppp.second))
+                    intervalString = "EMPTY SET";
+                else 
+                    intervalString = (ppp.second.first == NEG_LIMIT ? "NEG_LIMIT" : std::to_string(ppp.second.first)) + "->" +
+                       (ppp.second.second == POS_LIMIT ? "POS_LIMIT" : std::to_string(
+                               ppp.second.second));
+                std::cout << getInstructionString(*(ppp.first)) << "  >>  " << intervalString
                           << std::endl;
             }
         }
     }
 }
 
-void printcontextCombination(std::vector<std::map<Instruction *, varInterval>> &contextCombination) {
+void runBlockIntervalAnalysis(BasicBlock *entryBB,
+                              std::vector<std::map<Instruction *, std::pair<int, int>>> &contextCombination,
+                              std::map<std::string, Instruction *> &instructionMap,
+                              std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> &contextAnalysisMap,
+                              std::stack<std::pair<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>>> &contextTraversalStack) {
+    std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> initialSet;
     for (auto &combination : contextCombination) {
-        std::cout << "================Context=============" << std::endl;
-        for (auto &combination_pair : combination) {
-            std::cout << getInstructionString(*(combination_pair.first)) << "  >>  "
-                      << combination_pair.second.getIntervalString()
-                      << std::endl;
+        std::map<Instruction *, std::pair<int, int>> emptySet;
+        initialSet.insert(std::make_pair(&combination, combination));
+    }
+    contextTraversalStack.push(std::make_pair(entryBB, initialSet));
+
+    int count = 0;
+    while (!contextTraversalStack.empty() && count < 10000) {
+        std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> result;
+        auto pair = contextTraversalStack.top();
+        contextTraversalStack.pop();
+
+        auto changed = analyzeBlockWithContext(pair.first, pair.second, instructionMap, contextAnalysisMap, result);
+
+        if (changed) {
+            for (auto &p : result) {
+                contextTraversalStack.push(p);
+            }
         }
+        count++;
     }
 }
 
@@ -245,11 +559,8 @@ int main(int argc, char **argv)
     std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> analysisMap;
 
     std::stack<std::pair<BasicBlock *, std::map<Instruction *, std::pair<int, int>>>> traversalStack;
-    std::map<BasicBlock *, std::vector<std::map<Instruction *, std::pair<int, int>>>> varIntervalMap;
-    std::map<BasicBlock *, std::vector<std::map<Instruction *, std::pair<int, int>>>> globalVarIntervalMap;
 
-    std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> intervalAnalysisMap;
-    std::stack<std::pair<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>>> intervalTraversalStack;
+    std::vector<std::map<Instruction *, std::pair<int, int>>> globalVarIntervalMap;
 
     std::map<Instruction *, std::pair<int, int>> emptySet;
     traversalStack.push(std::make_pair(entryBB, emptySet));
@@ -270,22 +581,48 @@ int main(int argc, char **argv)
         count++;
     }
 
+    // printAnalysisMap(analysisMap, varMap);
+
     for(auto &row : analysisMap) {
+
+        for (auto &interval : row.second) {
+            interval.second = std::make_pair(NEG_LIMIT, POS_LIMIT);
+        }
+
         BasicBlock *BB = row.first;
         std::map<Instruction *, std::pair<int, int>> instrRangeMap = row.second;
         std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> updatedBlockMap;
 
         for(auto &instr : *BB) {
-            if(intr.getOpcode() == Instruction::Br) {
+            if(instr.getOpcode() == Instruction::Br) {
+
                 branchOperation(BB, instr, instrRangeMap, varMap, updatedBlockMap);
-                if(updatedBlockMap.size() > 1) {
+
+                if (updatedBlockMap.size() <= 1)
+                    break;
+                
                     for(auto &instrMap : updatedBlockMap){
-                        varIntervalMap[BB].push_back(instrMap.second)
+                        varIntervalMap[BB].push_back(instrMap.second);
                     }
                     for (auto iter = varIntervalMap[BB][0].begin(); iter != varIntervalMap[BB][0].end();) {
                         bool match = false;
                         for (auto iter1 = varIntervalMap[BB][1].begin(); iter1 != varIntervalMap[BB][1].end();) {
-                            if (iter->second.getIntervalString() == iter1->second.getIntervalString()) {
+                            std::string intervalString1;
+                            std::string intervalString2;
+                            if (checkEmpty(iter->second)){
+                                intervalString1 = "EMPTY";
+                            } else {
+                                intervalString1 = (iter->second.first == NEG_LIMIT ? "NEG_LIMIT" : std::to_string(iter->second.first)) + "-->" +
+                                   (iter->second.second == POS_LIMIT ? "POS_LIMIT" : std::to_string(iter->second.second));
+                            }
+                            if (checkEmpty(iter1->second)){
+                                intervalString2 = "EMPTY";
+                            } else {
+                                intervalString2 = (iter1->second.first == NEG_LIMIT ? "NEG_LIMIT" : std::to_string(iter1->second.first)) + "-->" +
+                                   (iter1->second.second == POS_LIMIT ? "POS_LIMIT" : std::to_string(iter1->second.second));
+                            }
+                            if(intervalString1 == intervalString2)
+                            {
                                 iter = varIntervalMap[BB][0].erase(iter);
                                 iter1 = varIntervalMap[BB][1].erase(iter1);
                                 match = true;
@@ -296,15 +633,6 @@ int main(int argc, char **argv)
                         if (!match)
                             iter++;
                     }
-
-                    // for(int i =0; i < varIntervalMap[BB][0].size(); i++){
-                    //     for(int j = 0; j < varIntervalMap[BB][1].size(); j++){
-                    //         if(varIntervalMap[BB][0][i].second.getIntervalString() == varIntervalMap[BB][1][j].second.getIntervalString()) {
-
-                    //         }
-                    //     }
-                    // }
-
                     for(auto iter = varIntervalMap[BB][0].begin(); iter != varIntervalMap[BB][0].end();){
                         if(iter->first->getName().size() == 0){
                             iter = varIntervalMap[BB][0].erase(iter);
@@ -319,94 +647,62 @@ int main(int argc, char **argv)
                             iter++;
                         }
                     }
-
-                }
-                
             }
         }
     }
 
-    printBasicBlockContext(varIntervalMap);
+    // printBasicBlockContext(varIntervalMap);
 
+    // varInterval: <BasicBlock *, std::vector<std::map<Instruction *, std::pair<int, int>>>>
     for(auto varInterval : varIntervalMap) {
-        // std::vector<std::map<Instruction*, varInterval>> size not equal to 0 and map size not equal to 0
-        if (varInterval.second.size() != 0 && varInterval.second[0].size() != 0) {
+            if(varInterval.second.size() == 0 || varInterval.second[0].size() == 0) {
+                continue;
+            }
             if(globalVarIntervalMap.size() == 0) {
                 globalVarIntervalMap = varInterval.second;
             } else {
-                std::map<BasicBlock *, std::vector<std::map<Instruction *, std::pair<int, int>>>> copy = globalVarIntervalMap;
+                std::vector<std::map<Instruction *, std::pair<int, int>>> copy = globalVarIntervalMap;
                 globalVarIntervalMap.clear();
+                // instrMap: std::vector<std::map<Instruction *, std::pair<int, int>>>
                 for(auto instrMap : varInterval.second) {
+                    // globalInstrMap: std::map<Instruction *, std::pair<int, int>>
                     for(auto globalInstrMap : copy) {
+                        // iter: std::map<Instruction *, std::pair<int, int>>
                         for(auto iter = instrMap.begin(); iter != instrMap.end(); iter++) {
-                            if (globalInstrMap.find(iter->first) != globalInstrMap.end()) {
-                                std::pair<int, int> intersection = intersection(globalInstrMap.find(iter->first)->second,  iter->second);
-                                globalInstrMap.insert(std::make_pair(iter->first,intersection));
-                            } else {
+                            if (globalInstrMap.find(iter->first) == globalInstrMap.end()) {
                                 globalInstrMap.insert(*iter);
+                            } else {
+                                std::pair<int, int> intersectionResult = intersection(globalInstrMap.find(iter->first)->second, iter->second);
+                                globalInstrMap.insert(std::make_pair(iter->first,intersectionResult));
                             }
                         }
+                        globalVarIntervalMap.push_back(globalInstrMap);
                     }
                 }
             }
+    }
+
+    for (auto &combination : globalVarIntervalMap) {
+        std::cout << "================Context=============" << std::endl;
+        for (auto &combination_pair : combination) {
+            std::string str;
+            if (checkEmpty(combination_pair.second))
+                str = "EMPTY SET";
+            str = (combination_pair.second.first == NEG_LIMIT ? "NEG_LIMIT" : std::to_string(combination_pair.second.first)) + "-" +
+                   (combination_pair.second.second == POS_LIMIT ? "POS_LIMIT" : std::to_string(
+                           combination_pair.second.second));
+            std::cout << getInstructionString(*(combination_pair.first)) << "  >>  "
+                      << str
+                      << std::endl;
         }
     }
 
-    printcontextCombination(globalVarIntervalMap);
+    std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> intervalAnalysisMap;
+    std::stack<std::pair<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>>> intervalTraversalStack;
 
-    std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> emptyIntervalSet;
-    for (auto &varInterval : globalVarIntervalMap) {
-        std::map<Instruction *, std::pair<int, int>> emptySet;
-        emptyIntervalSet.insert(std::make_pair(&varInterval, varInterval));
-    }
-    intervalTraversalStack.push(std::make_pair(entryBB, emptyIntervalSet));
-
-    int count = 0;
-    while (!intervalTraversalStack.empty() && count < 10000) {
-        std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> updatedBlockIntervalMap;
-        auto bMap = intervalTraversalStack.top();
-        intervalTraversalStack.pop();
-
-        bool changed = intervalBlockAnalysis(bMap.first, bMap.second, varMap, intervalAnalysisMap, updatedBlockIntervalMap);
-
-        if (changed) {
-            for (auto &p : updatedBlockIntervalMap) {
-                intervalTraversalStack.push(p);
-            }
-        }
-        count++;
-    }
+    runBlockIntervalAnalysis(entryBB, globalVarIntervalMap, varMap, intervalAnalysisMap, intervalTraversalStack);
 
     printAnalysisMapWithContext(intervalAnalysisMap);
-
-    // We now print the analysis results:
-    for (auto& row : analysisMap) {
-        row.first->printAsOperand(errs(), false);
-        errs() << ": \n";
-        for (auto instrMap = row.second.begin(); instrMap != row.second.end(); instrMap++) {
-            std::string varName = (*instrMap).first->getName().str().c_str();
-            if (varName.size() == 0) {
-                continue;
-            }
-            for (auto instrMapItr = instrMap; instrMapItr != row.second.end(); instrMapItr++) {
-                std::string varName2 = (*instrMapItr).first->getName().str().c_str();
-                if (varName2.size() == 0 || varName == varName2) {
-                    continue;
-                }
-                int v1_range[2] = {(*instrMap).second.first, (*instrMap).second.second};
-                int v2_range[2] = {(*instrMapItr).second.first, (*instrMapItr).second.second};
-                // std::cout << "(" << v1_range[0] << ", " << v1_range[1] << ", " << v2_range[0] <<", " << v2_range[1] << ") = Infinite" << std::endl;
-                if (v1_range[0] == NEG_LIMIT || v1_range[1] == POS_LIMIT || v2_range[0] == NEG_LIMIT || v2_range[1] == POS_LIMIT) {
-                    std::cout << "(" << varName << ", " << varName2 << ") = Infinite" << std::endl;
-                } else {
-                    int min = std::abs(v1_range[0] - v2_range[1]);
-                    int max = std::abs(v1_range[1] - v2_range[0]);
-                    std::cout << "(" << varName << ", " << varName2 << ") = " << std::to_string(std::max(min, max)) << std::endl;
-                }
-
-            }
-        }
-    }
 }
 
 bool checkUpdates(std::map<Instruction *, std::pair<int, int>> &instrRangeMap, std::map<Instruction *, std::pair<int, int>> &analysisMap) 
@@ -422,7 +718,7 @@ bool checkUpdates(std::map<Instruction *, std::pair<int, int>> &instrRangeMap, s
                 changed = true;
             }
         } else if (!(p.second <= analysisMap[p.first])) {
-            analysisMap[p.first].second = limitRange(std::min(p.second.first, analysisMap[p.first].first));
+            analysisMap[p.first].first = limitRange(std::min(p.second.first, analysisMap[p.first].first));
             analysisMap[p.first].second = limitRange(std::max(p.second.second, analysisMap[p.first].second));
             changed = true;
         }
@@ -430,7 +726,346 @@ bool checkUpdates(std::map<Instruction *, std::pair<int, int>> &instrRangeMap, s
     return changed;
 }
 
-bool intervalBlockAnalysis
+bool intervalCheckUpdates(std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockIntervalMap,
+                          std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &updatedAnalysisMap) {
+    bool changed = false;
+    for (auto &intervalMap : blockIntervalMap) {
+        
+        // varInterval: std::map<Instruction *, std::pair<int, int>>
+        auto varIntervalResult = updatedAnalysisMap[intervalMap.first];
+        // intervalMap: std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>
+        auto varInterval = intervalMap.second;
+
+        for (auto &varRange : varInterval) {
+            if (varIntervalResult.find(varRange.first) == varIntervalResult.end()) {
+                updatedAnalysisMap[intervalMap.first][varRange.first] = varRange.second;
+                changed = true;
+            } else if (checkEmpty(varIntervalResult[varRange.first])) {
+                if (!checkEmpty(varRange.second)) {
+                    updatedAnalysisMap[intervalMap.first][varRange.first] = varRange.second;
+                    changed = true;
+                }
+            } else if (!(varRange.second <= varIntervalResult[varRange.first])) {
+                updatedAnalysisMap[intervalMap.first][varRange.first].first = limitRange(std::min(varRange.second.first, varIntervalResult[varRange.first].first));
+                updatedAnalysisMap[intervalMap.first][varRange.first].second = limitRange(std::max(varRange.second.second, varIntervalResult[varRange.first].second));
+                changed = true;
+            }
+        }
+    }
+    return changed;
+}
+
+std::pair<int, int> getOp(std::pair<int, int> op1, std::pair<int, int> op2, std::string op) {
+    if (op == "add") {
+        return addOp(op1, op2);
+    } else if (op == "sub") {
+        return subOp(op1, op2);
+    } else if (op == "mul") {
+        return mulOp(op1, op2);
+    } else if (op == "rem") {
+        return sremOp(op1, op2);
+    } else {
+        return std::make_pair(POS_LIMIT, NEG_LIMIT);
+    }
+}
+
+void operatorWithContext(BasicBlock *bb, Instruction &I,
+                         std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                         std::map<std::string, Instruction *> &instructionMap, std::string op) {
+    std::cout << getInstructionString(I) << std::endl;
+    for(auto &pair : blockMap) {
+        std::cout << "=======================bloack start======================" <<std::endl;
+        for(auto &i : pair.second) {
+            std::cout << getInstructionString(*(i.first)) << std::endl;
+            std::cout << i.second.first << "-->" << i.second.second << std::endl;
+        }
+        std::cout << "========================block end========================" <<std::endl;
+    }
+
+    if (blockMap.begin()->first->find(&I) != blockMap.begin()->first->end()) {
+        auto join = joinWithContext(bb, blockMap);
+        for (auto &pair :blockMap) {
+            auto context = *pair.first;
+            auto result = getOperandIntervals(I, I.getOperand(0), I.getOperand(1), *pair.first, join, instructionMap);
+            std::pair<int, int> temp = getOp(result[0], result[1], op);
+            if (checkEmpty(intersection(temp, context[&I])))
+                for (auto &var : pair.second)
+                    var.second = std::make_pair(POS_LIMIT, NEG_LIMIT);
+            else {
+                pair.second = join;
+                pair.second[&I] = intersection(temp, context[&I]);
+            }
+        }
+    } else {
+        std::cout << "enter else" << std::endl;
+        for (auto &pair : blockMap) {
+            auto context = *pair.first;
+            auto result = getOperandIntervals(I, I.getOperand(0), I.getOperand(1), *pair.first, pair.second,
+                                              instructionMap);
+            std::pair<int, int> temp = getOp(result[0], result[1], op);
+            std::cout << getInstructionString(I) << std::endl;
+            pair.second[&I] = temp;
+        }
+         std::cout << "exit else" << std::endl;
+    }
+    cleanUpEmpty(bb, blockMap);
+}
+
+
+
+//operators with context
+void analyzeAddWithContext(BasicBlock *bb, Instruction &I,
+                           std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                           std::map<std::string, Instruction *> &instructionMap) {
+    operatorWithContext(bb, I, blockMap, instructionMap, "add");
+}
+
+void analyzeSubWithContext(BasicBlock *bb, Instruction &I,
+                           std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                           std::map<std::string, Instruction *> &instructionMap) {
+    operatorWithContext(bb, I, blockMap, instructionMap, "sub");
+}
+
+void analyzeMulWithContext(BasicBlock *bb, Instruction &I,
+                           std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                           std::map<std::string, Instruction *> &instructionMap) {
+    operatorWithContext(bb, I, blockMap, instructionMap, "mul");
+}
+
+void analyzeSremWithContext(BasicBlock *bb, Instruction &I,
+                            std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                            std::map<std::string, Instruction *> &instructionMap) {
+    operatorWithContext(bb, I, blockMap, instructionMap, "rem");
+}
+
+void analyzeStoreWithContext(BasicBlock *bb, Instruction &I,
+                             std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                             std::map<std::string, Instruction *> &instructionMap) {
+    Value *op1 = I.getOperand(0);
+    auto op2_instr = instructionMap[getInstructionString(*dyn_cast<Instruction>(I.getOperand(1)))];
+    std::pair<int, int> temp;
+    if (blockMap.begin()->first->find(op2_instr) != blockMap.begin()->first->end()) {
+        auto join = joinWithContext(bb, blockMap);
+        if (isa<llvm::ConstantInt>(op1)) {
+            auto op1_val = dyn_cast<llvm::ConstantInt>(op1)->getZExtValue();
+            temp = std::make_pair(op1_val, op1_val);
+        } else {
+            auto op1_instr = instructionMap[getInstructionString(*dyn_cast<Instruction>(op1))];
+            temp = join[op1_instr];
+        }
+        for (auto &pair :blockMap) {
+            auto context = *pair.first;
+            if (checkEmpty(intersection(temp, context[op2_instr]))) {
+                for (auto &var : pair.second)
+                    var.second = std::make_pair(POS_LIMIT, NEG_LIMIT);
+            } else {
+                pair.second = join;
+                pair.second[op2_instr] = intersection(temp, context[op2_instr]);
+            }
+        }
+
+    } else {
+        for (auto &pair : blockMap) {
+            auto context = *pair.first;
+            if (isa<llvm::ConstantInt>(op1)) {
+                auto op1_val = dyn_cast<llvm::ConstantInt>(op1)->getZExtValue();
+                temp = std::make_pair(op1_val, op1_val);
+            } else {
+                auto op1_instr = instructionMap[getInstructionString(*dyn_cast<Instruction>(op1))];
+                temp = pair.second[op1_instr];
+            }
+            pair.second[op2_instr] = temp;
+        }
+    }
+    cleanUpEmpty(bb, blockMap);
+}
+
+void analyzeLoadWithContext(BasicBlock *bb, Instruction &I,
+                            std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                            std::map<std::string, Instruction *> &instructionMap) {
+    auto *op_instruction = dyn_cast<Instruction>(I.getOperand(0));
+    if (blockMap.begin()->first->find(&I) != blockMap.begin()->first->end()) {
+        auto join = joinWithContext(bb, blockMap);
+        for (auto &pair :blockMap) {
+            auto context = *pair.first;
+            std::pair<int, int> temp = pair.second[instructionMap[getInstructionString(*op_instruction)]];
+            if (checkEmpty(intersection(temp, context[&I]))) {
+                for (auto &var : pair.second)
+                    var.second = std::pair<int, int>(POS_LIMIT, NEG_LIMIT);
+            } else {
+                pair.second = join;
+                pair.second[&I] = intersection(temp, context[&I]);
+            }
+        }
+    } else {
+        for (auto &pair : blockMap) {
+            pair.second[&I] = pair.second[instructionMap[getInstructionString(*op_instruction)]];
+        }
+    }
+    cleanUpEmpty(bb, blockMap);
+}
+
+void analyzeAllocaWithContext(BasicBlock *bb, Instruction &I,
+                              std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                              std::map<std::string, Instruction *> &instructionMap) {
+    if (blockMap.begin()->first->find(&I) != blockMap.begin()->first->end()) {
+        for (auto &pair :blockMap)
+            pair.second = joinWithContext(bb, blockMap);
+    } else {
+        for (auto &pair : blockMap)
+            pair.second[&I] = std::make_pair(NEG_LIMIT, POS_LIMIT);
+    }
+    cleanUpEmpty(bb, blockMap);
+
+}
+
+void analyzeBrWithContext(BasicBlock *BB, Instruction &I,
+                          std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &blockMap,
+                          std::map<std::string, Instruction *> &instructionMap,
+                          std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> &result) {
+    auto *branchInst = dyn_cast<BranchInst>(&I);
+    auto *bb_op1 = branchInst->getSuccessor(0);
+    if (!(branchInst->isConditional())) {
+        result[bb_op1] = blockMap;
+        return;
+    }
+    auto *bb_op2 = dyn_cast<BasicBlock>(branchInst->getSuccessor(1));
+
+    std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> total_branch1 = blockMap;
+    std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> total_branch2 = blockMap;
+
+
+    auto branch_1_context = varIntervalMap[BB][0];
+    auto branch_2_context = varIntervalMap[BB][1];
+
+
+    for (auto &pair : total_branch1) {
+        bool emptyBranch1 = false;
+        for (auto &context_pair : *pair.first) {
+            if (branch_1_context.find(context_pair.first) != branch_1_context.end() &&
+                checkEmpty(intersection(branch_1_context[context_pair.first], context_pair.second))) {
+                emptyBranch1 = true;
+                break;
+            }
+        }
+        if (emptyBranch1) {
+            for (auto &variable_pair : pair.second) {
+                variable_pair.second = std::make_pair(POS_LIMIT, NEG_LIMIT);
+            }
+        }
+    }
+
+    for (auto &pair : total_branch2) {
+        bool emptyBranch2 = false;
+        for (auto &context_pair : *pair.first) {
+            if (branch_2_context.find(context_pair.first) != branch_2_context.end() &&
+                checkEmpty(intersection(branch_2_context[context_pair.first], context_pair.second))) {
+                emptyBranch2 = true;
+                break;
+            }
+        }
+        if (emptyBranch2) {
+            for (auto &variable_pair : pair.second) {
+                variable_pair.second = std::make_pair(POS_LIMIT, NEG_LIMIT);
+            }
+        }
+    }
+
+    result[bb_op1] = total_branch1;
+    result[bb_op2] = total_branch2;
+
+}
+
+
+bool unionAndCheckChangedWithContext(
+        std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &input,
+        std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &analysisMap) {
+    bool changed = false;
+    for (auto &context : input) {
+        /**
+         * Each context
+         */
+        auto input_result = context.second;
+        auto analysisMap_result = analysisMap[context.first];
+        for (auto &p : input_result) {
+            if (analysisMap_result.find(p.first) == analysisMap_result.end()) {
+                analysisMap[context.first][p.first] = p.second;
+                changed = true;
+            } else if (checkEmpty(analysisMap_result[p.first])) {
+                if (!checkEmpty(p.second)) {
+                    analysisMap[context.first][p.first] = p.second;
+                    changed = true;
+                }
+            } else if (!(p.second <= analysisMap_result[p.first])) {
+                analysisMap[context.first][p.first].first = limitRange(
+                        std::min(p.second.first, analysisMap_result[p.first].first));
+                analysisMap[context.first][p.first].second = limitRange(
+                        std::max(p.second.second, analysisMap_result[p.first].second));
+                changed = true;
+            } else { ;
+            }
+        }
+    }
+    return changed;
+}
+
+
+
+bool analyzeBlockWithContext(BasicBlock *BB,
+                             std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &input,
+                             std::map<std::string, Instruction *> &instructionMap,
+                             std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> &contextAnalysisMap,
+                             std::map<BasicBlock *, std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>>> &result) {
+    for (auto &I: *BB) {
+        switch (I.getOpcode()) {
+            case Instruction::Add: {
+                analyzeAddWithContext(BB, I, input, instructionMap);
+                break;
+            }
+            case Instruction::Sub: {
+                analyzeSubWithContext(BB, I, input, instructionMap);
+                break;
+            }
+            case Instruction::Mul: {
+                analyzeMulWithContext(BB, I, input, instructionMap);
+                break;
+            }
+            case Instruction::SRem: {
+                analyzeSremWithContext(BB, I, input, instructionMap);
+                break;
+            }
+            case Instruction::Alloca: {
+                analyzeAllocaWithContext(BB, I, input, instructionMap);
+                break;
+            }
+            case Instruction::Store: {
+                analyzeStoreWithContext(BB, I, input, instructionMap);
+                break;
+            }
+            case Instruction::Load: {
+                analyzeLoadWithContext(BB, I, input, instructionMap);
+                break;
+            }
+            case Instruction::ICmp: {
+                break;
+            }
+            case Instruction::Br: {
+                analyzeBrWithContext(BB, I, input, instructionMap, result);
+                bool changed = unionAndCheckChangedWithContext(input, contextAnalysisMap[BB]);
+                return changed;
+            }
+            case Instruction::Ret: {
+                bool changed = unionAndCheckChangedWithContext(input, contextAnalysisMap[BB]);
+                return changed;
+            }
+            default: {
+                std::cout << "Unknown: " << I.getOpcodeName() << std::endl;
+                break;
+            }
+        }
+    }
+    return false;
+}
 
 bool blockAnalysis(BasicBlock *BB, std::map<Instruction *, std::pair<int, int>> &instrRangeMap, std::map<std::string, Instruction *> &instrMap,
                   std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> &analysisMap,
@@ -539,6 +1174,14 @@ void backwardAdd(Instruction &I, std::map<Instruction *, std::pair<int, int>> &i
         }
         instrRangeMap[instrMap[varName]] = subOp(originalRange, varRange2);
     }     
+
+    // std::string varString;
+    //  if (checkEmpty(instrRangeMap[instrMap[getInstructionString(I)]]))
+    //         varString = "EMPTY SET";
+    // varString = (instrRangeMap[instrMap[getInstructionString(I)]].first == NEG_LIMIT ? "NEG_LIMIT" : std::to_string(instrRangeMap[instrMap[getInstructionString(I)]].second)) + "-" +
+    //            (instrRangeMap[instrMap[getInstructionString(I)]].second == POS_LIMIT ? "POS_LIMIT" : std::to_string(
+    //                    instrRangeMap[instrMap[getInstructionString(I)]].second));
+    // std::cout << getInstructionString(I) << " ===>" << varString << std::endl;
 }
 
 void backwardSub(Instruction &I, std::map<Instruction *, std::pair<int, int>> &instrRangeMap, std::map<std::string, Instruction *> &instrMap) {
@@ -601,8 +1244,8 @@ void backwardLoad(Instruction &I, std::map<Instruction *, std::pair<int, int>> &
     std::string varName = getInstructionString(*dyn_cast<Instruction>(I.getOperand(0)));
     if (!checkEmpty(instrRangeMap[instrMap[varName]])) { ;
         if (checkEmpty(instrRangeMap[instrMap[getInstructionString(I)]])) {
-            instrRangeMap[instrMap[varName]].first = limitRange(NEG_LIMIT);
-            instrRangeMap[instrMap[varName]].second = limitRange(POS_LIMIT);
+            instrRangeMap[instrMap[varName]].first = limitRange(POS_LIMIT);
+            instrRangeMap[instrMap[varName]].second = limitRange(NEG_LIMIT);
         } else {
             instrRangeMap[instrMap[varName]].first = limitRange(std::max(instrRangeMap[instrMap[varName]].first, instrRangeMap[instrMap[getInstructionString(I)]].first));
             instrRangeMap[instrMap[varName]].second = limitRange(std::min(instrRangeMap[instrMap[varName]].second, instrRangeMap[instrMap[getInstructionString(I)]].second));
@@ -657,6 +1300,22 @@ void updateInterval(std::pair<int, int> &varRange1, std::pair<int, int> &varRang
     }
 }
 
+void branchUpdate(Value *operand1, Value *operand2, std::pair<int, int> &R, std::map<Instruction *, std::pair<int, int>> &result,
+             std::map<std::string, Instruction *> &instructionMap) {
+    if (isa<llvm::ConstantInt>(operand1)) {
+        auto op1_val = dyn_cast<llvm::ConstantInt>(operand1)->getZExtValue();
+        std::pair<int, int> X = std::make_pair(op1_val, op1_val);
+        updateInterval(X, result[instructionMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], R);
+    } else if (isa<llvm::ConstantInt>(operand2)) {
+        auto op2_val = dyn_cast<llvm::ConstantInt>(operand2)->getZExtValue();
+        std::pair<int, int> Y = std::make_pair(op2_val, op2_val);
+        updateInterval(result[instructionMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], Y, R);
+    } else {
+        updateInterval(result[instructionMap[getInstructionString(*dyn_cast<Instruction>(operand1))]],
+             result[instructionMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], R);
+    }
+}
+
 void branchOperation(BasicBlock *BB, Instruction &I, std::map<Instruction *, std::pair<int, int>> &instrRangeMap,std::map<std::string, Instruction *> &instrMap, std::map<BasicBlock *, std::map<Instruction *, std::pair<int, int>>> &updatedBlockMap) {
     auto *currentInstr = dyn_cast<BranchInst>(&I);
     auto *successor1 = currentInstr->getSuccessor(0);
@@ -668,60 +1327,69 @@ void branchOperation(BasicBlock *BB, Instruction &I, std::map<Instruction *, std
         auto operand1 = dyn_cast<ICmpInst>(I.getOperand(0))->getOperand(0);
         auto operand2 = dyn_cast<ICmpInst>(I.getOperand(0))->getOperand(1);
 
-        std::pair<int, int> varRange_branch1 = std::make_pair(NEG_LIMIT, POS_LIMIT);
-        std::pair<int, int> varRange_branch2 = std::make_pair(NEG_LIMIT, POS_LIMIT);
-
         switch (dyn_cast<ICmpInst>(I.getOperand(0))->getSignedPredicate()) {
             case CmpInst::Predicate::ICMP_SGT : {
-                varRange_branch1 = std::make_pair(1, POS_LIMIT);
-                varRange_branch2 = std::make_pair(NEG_LIMIT, 0);
+                std::pair<int, int> varRange_branch1 = std::make_pair(1, POS_LIMIT);
+                std::pair<int, int> varRange_branch2 = std::make_pair(NEG_LIMIT, 0);
+                branchUpdate(operand1, operand2, varRange_branch1, branch1, instrMap);
+                branchUpdate(operand1, operand2, varRange_branch2, branch2, instrMap);
                 break;
             }
             case CmpInst::Predicate::ICMP_SGE : {
-                varRange_branch1 = std::make_pair(0, POS_LIMIT);
-                varRange_branch2 = std::make_pair(NEG_LIMIT, -1);
+                std::pair<int, int> varRange_branch1 = std::make_pair(0, POS_LIMIT);
+                std::pair<int, int> varRange_branch2 = std::make_pair(NEG_LIMIT, -1);
+                branchUpdate(operand1, operand2, varRange_branch1, branch1, instrMap);
+                branchUpdate(operand1, operand2, varRange_branch2, branch2, instrMap);
                 break;
             }
             case CmpInst::Predicate::ICMP_SLT : {
-                varRange_branch1 = std::make_pair(NEG_LIMIT, -1);
-                varRange_branch2 = std::make_pair(0, POS_LIMIT);
+                std::pair<int, int> varRange_branch1 = std::make_pair(NEG_LIMIT, -1);
+                std::pair<int, int> varRange_branch2 = std::make_pair(0, POS_LIMIT);
+                branchUpdate(operand1, operand2, varRange_branch1, branch1, instrMap);
+                branchUpdate(operand1, operand2, varRange_branch2, branch2, instrMap);
                 break;
             }
             case CmpInst::Predicate::ICMP_SLE : {
-                varRange_branch1 = std::make_pair(NEG_LIMIT, 0);
-                varRange_branch2 = std::make_pair(1, POS_LIMIT);
+                std::pair<int, int> varRange_branch1 = std::make_pair(NEG_LIMIT, 0);
+                std::pair<int, int> varRange_branch2 = std::make_pair(1, POS_LIMIT);
+                branchUpdate(operand1, operand2, varRange_branch1, branch1, instrMap);
+                branchUpdate(operand1, operand2, varRange_branch2, branch2, instrMap);
                 break;
             }
             case CmpInst::Predicate::ICMP_EQ : {
-                varRange_branch1 = std::make_pair(0, 0);
-                varRange_branch2 = std::make_pair(NEG_LIMIT, POS_LIMIT);
+                std::pair<int, int> varRange_branch1 = std::make_pair(0, 0);
+                std::pair<int, int> varRange_branch2 = std::make_pair(NEG_LIMIT, POS_LIMIT);
+                branchUpdate(operand1, operand2, varRange_branch1, branch1, instrMap);
+                branchUpdate(operand1, operand2, varRange_branch2, branch2, instrMap);
                 break;
             }
             case CmpInst::Predicate::ICMP_NE : {
-                varRange_branch1 = std::make_pair(NEG_LIMIT, POS_LIMIT);
-                varRange_branch2 = std::make_pair(0, 0);
+                std::pair<int, int> varRange_branch1 = std::make_pair(NEG_LIMIT, POS_LIMIT);
+                std::pair<int, int> varRange_branch2 = std::make_pair(0, 0);
+                branchUpdate(operand1, operand2, varRange_branch1, branch1, instrMap);
+                branchUpdate(operand1, operand2, varRange_branch2, branch2, instrMap);
                 break;
             }
             default: {
                 break;
             }
         }
-        if(varRange_branch1 != std::make_pair(NEG_LIMIT, POS_LIMIT) && varRange_branch2 != std::make_pair(NEG_LIMIT, POS_LIMIT)){
-            if(isa<llvm::ConstantInt>(operand1)){
-                auto constant1 = dyn_cast<llvm::ConstantInt>(operand1)->getZExtValue();
-                std::pair<int, int> range1 = std::make_pair(constant1, constant1);
-                updateInterval(range1, branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch1);
-                updateInterval(range1, branch2[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch2);
-            } else if (isa<llvm::ConstantInt>(operand2)) {
-                auto constant2 = dyn_cast<llvm::ConstantInt>(operand2)->getZExtValue();
-                std::pair<int, int> range1 = std::make_pair(constant2, constant2);
-                updateInterval(branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], range1, varRange_branch1);
-                updateInterval(branch2[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], range1, varRange_branch2);
-            } else {
-                updateInterval(branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch1);
-                updateInterval(branch2[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch2);
-            }
-        }
+        // if(varRange_branch1 != std::make_pair(NEG_LIMIT, POS_LIMIT) && varRange_branch2 != std::make_pair(NEG_LIMIT, POS_LIMIT)){
+        //     if(isa<llvm::ConstantInt>(operand1)){
+        //         auto constant1 = dyn_cast<llvm::ConstantInt>(operand1)->getZExtValue();
+        //         std::pair<int, int> range1 = std::make_pair(constant1, constant1);
+        //         updateInterval(range1, branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch1);
+        //         updateInterval(range1, branch2[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch2);
+        //     } else if (isa<llvm::ConstantInt>(operand2)) {
+        //         auto constant2 = dyn_cast<llvm::ConstantInt>(operand2)->getZExtValue();
+        //         std::pair<int, int> range1 = std::make_pair(constant2, constant2);
+        //         updateInterval(branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], range1, varRange_branch1);
+        //         updateInterval(branch2[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], range1, varRange_branch2);
+        //     } else {
+        //         updateInterval(branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch1);
+        //         updateInterval(branch2[instrMap[getInstructionString(*dyn_cast<Instruction>(operand1))]], branch1[instrMap[getInstructionString(*dyn_cast<Instruction>(operand2))]], varRange_branch2);
+        //     }
+        // }
         auto iterator = BB->rend();    
         while (true) {
             iterator--;
@@ -763,5 +1431,6 @@ void branchOperation(BasicBlock *BB, Instruction &I, std::map<Instruction *, std
         updatedBlockMap[successor2] = branch2;
     } else {
         updatedBlockMap[successor1] = instrRangeMap;
+        return;
     }
 }

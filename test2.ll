@@ -5,52 +5,65 @@ target triple = "x86_64-pc-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define i32 @main() #0 {
   %1 = alloca i32, align 4
-  %N = alloca i32, align 4
   %a = alloca i32, align 4
   %b = alloca i32, align 4
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  %z = alloca i32, align 4
+  %N = alloca i32, align 4
   %i = alloca i32, align 4
   store i32 0, i32* %1
-  store i32 0, i32* %z, align 4
+  store i32 -2, i32* %a, align 4
+  store i32 5, i32* %b, align 4
+  store i32 0, i32* %x, align 4
   store i32 0, i32* %i, align 4
   br label %2
 
-; <label>:2                                       ; preds = %6, %0
+; <label>:2                                       ; preds = %21, %0
   %3 = load i32* %i, align 4
-  %4 = load i32* %N, align 4
-  %5 = icmp slt i32 %3, %4
-  br i1 %5, label %6, label %26
+  %4 = add nsw i32 %3, 1
+  store i32 %4, i32* %i, align 4
+  %5 = load i32* %N, align 4
+  %6 = icmp slt i32 %3, %5
+  br i1 %6, label %7, label %22
 
-; <label>:6                                       ; preds = %2
-  %7 = load i32* %x, align 4
-  %8 = load i32* %y, align 4
-  %9 = mul nsw i32 2, %8
-  %10 = add nsw i32 %7, %9
-  %11 = load i32* %z, align 4
-  %12 = mul nsw i32 3, %11
-  %13 = add nsw i32 %10, %12
-  %14 = srem i32 %13, 3
-  %15 = sub nsw i32 0, %14
+; <label>:7                                       ; preds = %2
+  %8 = load i32* %a, align 4
+  %9 = icmp sgt i32 %8, 0
+  br i1 %9, label %10, label %13
+
+; <label>:10                                      ; preds = %7
+  %11 = load i32* %x, align 4
+  %12 = add nsw i32 %11, 7
+  store i32 %12, i32* %x, align 4
+  store i32 5, i32* %y, align 4
+  br label %16
+
+; <label>:13                                      ; preds = %7
+  %14 = load i32* %x, align 4
+  %15 = sub nsw i32 %14, 2
   store i32 %15, i32* %x, align 4
-  %16 = load i32* %x, align 4
-  %17 = mul nsw i32 3, %16
-  %18 = load i32* %y, align 4
-  %19 = mul nsw i32 2, %18
-  %20 = add nsw i32 %17, %19
-  %21 = load i32* %z, align 4
-  %22 = add nsw i32 %20, %21
-  %23 = srem i32 %22, 11
-  store i32 %23, i32* %y, align 4
-  %24 = load i32* %z, align 4
-  %25 = add nsw i32 %24, 1
-  store i32 %25, i32* %z, align 4
+  store i32 1, i32* %y, align 4
+  br label %16
+
+; <label>:16                                      ; preds = %13, %10
+  %17 = load i32* %b, align 4
+  %18 = icmp sgt i32 %17, 0
+  br i1 %18, label %19, label %20
+
+; <label>:19                                      ; preds = %16
+  store i32 6, i32* %a, align 4
+  br label %21
+
+; <label>:20                                      ; preds = %16
+  store i32 -5, i32* %a, align 4
+  br label %21
+
+; <label>:21                                      ; preds = %20, %19
   br label %2
 
-; <label>:26                                      ; preds = %2
-  %27 = load i32* %1
-  ret i32 %27
+; <label>:22                                      ; preds = %2
+  %23 = load i32* %1
+  ret i32 %23
 }
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
