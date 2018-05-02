@@ -977,6 +977,17 @@ void analyzeBrWithContext(BasicBlock *BB, Instruction &I,
 }
 
 
+bool belongTo(std::pair<int, int> v1, std::pair<int, int> v2) {
+    if (v1.first == POS_LIMIT && v1.second == NEG_LIMIT) {
+        return true;
+    }
+    if (v2.first == POS_LIMIT && v2.second == NEG_LIMIT) {
+        return false;
+    }
+    return v1.first >= v2.first && v1.second <= v2.second;
+}
+
+
 bool unionAndCheckChangedWithContext(
         std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &input,
         std::map<std::map<Instruction *, std::pair<int, int>> *, std::map<Instruction *, std::pair<int, int>>> &analysisMap) {
@@ -996,7 +1007,7 @@ bool unionAndCheckChangedWithContext(
                     analysisMap[context.first][p.first] = p.second;
                     changed = true;
                 }
-            } else if (!(p.second <= analysisMap_result[p.first])) {
+            } else if (!(belongTo(p.second , analysisMap_result[p.first]))) {
                 analysisMap[context.first][p.first].first = limitRange(
                         std::min(p.second.first, analysisMap_result[p.first].first));
                 analysisMap[context.first][p.first].second = limitRange(
