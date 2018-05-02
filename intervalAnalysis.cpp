@@ -1445,3 +1445,90 @@ void branchOperation(BasicBlock *BB, Instruction &I, std::map<Instruction *, std
         return;
     }
 }
+
+
+
+
+// void addOperation(Instruction &I, std::map<Instruction *, interval> &instrRangeMap, std::map<std::string, Instruction *> &instrMap) {
+//     std::string instructionName = getInstructionString(I);
+//     Value *op1 = I.getOperand(0);
+//     Value *op2 = I.getOperand(1);
+
+//     if (isa<llvm::ConstantInt>(op2)) {
+//         auto op2_val = dyn_cast<llvm::ConstantInt>(op2)->getZExtValue();
+//         std::string op1_str = getInstructionString(*dyn_cast<Instruction>(op1));
+//         interval interval_op1 = instrRangeMap[instrMap[op1_str]];
+//         instrRangeMap[instrMap[instructionName]] = addOp(interval_op1, interval(op2_val, op2_val));
+//     } else if (isa<llvm::ConstantInt>(op1)) {
+//         auto op1_val = dyn_cast<llvm::ConstantInt>(op1)->getZExtValue();
+//         std::string op2_str = getInstructionString(*dyn_cast<Instruction>(op2));
+//         interval interval_op2 = instrRangeMap[instrMap[op2_str]];
+//         instrRangeMap[instrMap[instructionName]] = addOp(interval_op2, interval(op1_val, op1_val));
+//     } else {
+//         interval interval_op1 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op1))]];
+//         interval interval_op2 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op2))]];
+//         instrRangeMap[instrMap[instructionName]] = addOp(interval_op1, interval_op2);
+//     }
+// }
+
+// void subOperation(Instruction &I, std::map<Instruction *, interval> &instrRangeMap, std::map<std::string, Instruction *> &instrMap) {
+//     std::string instructionName = getInstructionString(I);
+//     Value *op1 = I.getOperand(0);
+//     Value *op2 = I.getOperand(1);
+
+//     if (isa<llvm::ConstantInt>(op2)) {
+//         auto op2_val = dyn_cast<llvm::ConstantInt>(op2)->getZExtValue();
+//         interval interval_op1 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op1))]];
+//         instrRangeMap[instrMap[instructionName]] = subOp(interval_op1, interval(op2_val, op2_val));
+//     } else if (isa<llvm::ConstantInt>(op1)) {
+//         auto op1_val = dyn_cast<llvm::ConstantInt>(op1)->getZExtValue();
+//         interval interval_op2 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op2))]];
+//         instrRangeMap[instrMap[instructionName]] = subOp(interval(op1_val, op1_val), interval_op2);
+//     } else {
+//         interval interval_op1 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op1))]];
+//         interval interval_op2 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op2))]];
+//         instrRangeMap[instrMap[instructionName]] = subOp(interval_op1, interval_op2);
+//     }
+// }
+
+// void mulOperation(Instruction &I, std::map<Instruction *, interval> &instrRangeMap, std::map<std::string, Instruction *> &instrMap) {
+//     std::string instructionName = getInstructionString(I);
+//     Value *op1 = I.getOperand(0);
+//     Value *op2 = I.getOperand(1);
+
+//     if (isa<llvm::ConstantInt>(op2)) {
+//         auto op2_val = dyn_cast<llvm::ConstantInt>(op2)->getZExtValue();
+//         std::string op1_str = getInstructionString(*dyn_cast<Instruction>(op1));
+//         interval interval_op1 = instrRangeMap[instrMap[op1_str]];
+//         instrRangeMap[instrMap[instructionName]] = mulOp(interval_op1, interval(op2_val, op2_val));
+//     } else if (isa<llvm::ConstantInt>(op1)) {
+//         auto op1_val = dyn_cast<llvm::ConstantInt>(op1)->getZExtValue();
+//         std::string op2_str = getInstructionString(*dyn_cast<Instruction>(op2));
+//         interval interval_op2 = instrRangeMap[instrMap[op2_str]];
+//         instrRangeMap[instrMap[instructionName]] = mulOp(interval_op2, interval(op1_val, op1_val));
+//     } else {
+//         interval interval_op1 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op1))]];
+//         interval interval_op2 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op2))]];
+//         instrRangeMap[instrMap[instructionName]] = mulOp(interval_op1, interval_op2);
+//     }
+// }
+
+// void sremOperation(Instruction &I, std::map<Instruction *, interval> &instrRangeMap, std::map<std::string, Instruction *> &instrMap) {
+//     std::string instructionName = getInstructionString(I);
+//     Value *op1 = I.getOperand(0);
+//     Value *op2 = I.getOperand(1);
+
+//     if (isa<llvm::ConstantInt>(op2)) {
+//         auto op2_val = dyn_cast<llvm::ConstantInt>(op2)->getZExtValue();
+//         interval interval_op1 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op1))]];
+//         instrRangeMap[instrMap[instructionName]] = sremOp(interval_op1, interval(op2_val, op2_val));
+//     } else if (isa<llvm::ConstantInt>(op1)) {
+//         auto op1_val = dyn_cast<llvm::ConstantInt>(op1)->getZExtValue();
+//         interval interval_op2 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op2))]];
+//         instrRangeMap[instrMap[instructionName]] = sremOp(interval(op1_val, op1_val), interval_op2);
+//     } else {
+//         interval interval_op1 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op1))]];
+//         interval interval_op2 = instrRangeMap[instrMap[getInstructionString(*dyn_cast<Instruction>(op2))]];
+//         instrRangeMap[instrMap[instructionName]] = sremOp(interval_op1, interval_op2);
+//     }
+// }
